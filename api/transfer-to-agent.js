@@ -5,36 +5,42 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
+  console.log('[TRANSFER API] Request received');
+
   const {
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
-    TWILIO_NUMBER, // Your Twilio number: +14243178845
-    TARGET_NUMBER  // The agent’s number: +17026753265
+    TWILIO_NUMBER,
+    TARGET_NUMBER
   } = process.env;
 
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_NUMBER || !TARGET_NUMBER) {
+    console.error('[TRANSFER API] Missing env vars');
+    return res.status(500).json({ message: 'Missing environment variables' });
+  }
+
+  console.log('[TRANSFER API] Making outbound call via Twilio...');
   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
   try {
-    const conferenceName = `live-support-${Date.now()}`;
-
-    // 1. Add original caller (already in call) to conference (if needed, via other TwiML)
-    // 2. Dial out to agent and join them to the same conference
     const call = await client.calls.create({
-      to: process.env.TARGET_NUMBER,
-      from: process.env.TWILIO_NUMBER,
+      to: TARGET_NUMBER,
+      from: TWILIO_NUMBER,
       twiml: `
         <Response>
           <Say>You are being connected to a live support caller.</Say>
           <Dial>
-            <Conference>${conferenceName}</Conference>
+            <Number>${TARGET_NUMBER}</Number>
           </Dial>
         </Response>
       `
     });
 
-    res.status(200).json({ message: 'Call to agent started', sid: call.sid });
+    console.log('[TRANSFER API] Call created:', call.sid);
+    res.status(200).json({ message: 'Call started', sid: call.sid });
+
   } catch (error) {
-    console.error('Twilio call error:', error);
-    res.status(500).json({ message: 'Call failed', error: error.message });
+    console.error('[TRANSFER API] Twilio error:', error);
+    res.status(500).json({ message: 'Twilio call failed', error: error.message });
   }
 }
