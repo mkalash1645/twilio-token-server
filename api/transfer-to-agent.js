@@ -5,8 +5,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  console.log('[TRANSFER API] Request received');
-
   const {
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
@@ -14,13 +12,9 @@ export default async function handler(req, res) {
     TARGET_NUMBER
   } = process.env;
 
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_NUMBER || !TARGET_NUMBER) {
-    console.error('[TRANSFER API] Missing env vars');
-    return res.status(500).json({ message: 'Missing environment variables' });
-  }
-
-  console.log('[TRANSFER API] Making outbound call via Twilio...');
   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+
+  const conferenceName = 'KB_LiveSupport'; // Must match the TwiML Bin conference name
 
   try {
     const call = await client.calls.create({
@@ -28,19 +22,18 @@ export default async function handler(req, res) {
       from: TWILIO_NUMBER,
       twiml: `
         <Response>
-          <Say>You are being connected to a live support caller.</Say>
+          <Say>You are being connected to a customer who was speaking with our AI assistant.</Say>
           <Dial>
-            <Number>${TARGET_NUMBER}</Number>
+            <Conference>${conferenceName}</Conference>
           </Dial>
         </Response>
       `
     });
 
-    console.log('[TRANSFER API] Call created:', call.sid);
-    res.status(200).json({ message: 'Call started', sid: call.sid });
-
+    console.log('[TRANSFER] Call to agent started:', call.sid);
+    res.status(200).json({ message: 'Agent is being dialed', sid: call.sid });
   } catch (error) {
-    console.error('[TRANSFER API] Twilio error:', error);
-    res.status(500).json({ message: 'Twilio call failed', error: error.message });
+    console.error('[TRANSFER] Error:', error);
+    res.status(500).json({ message: 'Call to agent failed', error: error.message });
   }
 }
