@@ -1,4 +1,4 @@
-const twilio = require('twilio');
+import twilio from 'twilio';
 
 export default function handler(req, res) {
   const {
@@ -11,9 +11,7 @@ export default function handler(req, res) {
   const identity = req.query.identity || 'anonymous';
 
   const AccessToken = twilio.jwt.AccessToken;
-  const VoiceGrant = AccessToken.VoiceGrant;
-
-  const voiceGrant = new VoiceGrant({
+  const VoiceGrant = new AccessToken.VoiceGrant({
     outgoingApplicationSid: TWILIO_APP_SID,
     incomingAllow: true,
   });
