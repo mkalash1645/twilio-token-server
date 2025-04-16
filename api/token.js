@@ -23,7 +23,7 @@ export default function handler(req, res) {
     { identity }
   );
 
-  token.addGrant(voiceGrant);
+  token.addGrant(VoiceGrant);
 
   res.status(200).json({ token: token.toJwt() });
 }
