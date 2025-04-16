@@ -6,7 +6,3 @@
     "twilio": "^4.15.0"
   }
 }
-
-  }
-}
-// minor update to trigger redeploy
