@@ -23,9 +23,6 @@ export default async function handler(req, res) {
     const call = await client.calls.create({
       to: TARGET_NUMBER,
       from: TWILIO_NUMBER,
-
-const conferenceName = "KB_LiveSupport";
-
 twiml: `
   <Response>
     <Say>Connecting you to a potential investor who was speaking with our AI assistant.</Say>
