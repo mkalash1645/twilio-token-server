@@ -12,6 +12,10 @@ export default async function handler(req, res) {
     TARGET_NUMBER,
   } = process.env;
 
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_NUMBER || !TARGET_NUMBER) {
+    return res.status(500).json({ message: 'Missing required environment variables' });
+  }
+
   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
   const conferenceName = 'KB_LiveSupport';
 
@@ -23,7 +27,7 @@ export default async function handler(req, res) {
         <Response>
           <Say>Connecting you to a potential investor who was speaking with our AI assistant.</Say>
           <Dial>
-            <Conference
+            <Conference 
               startConferenceOnEnter="true"
               endConferenceOnExit="false"
               waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
@@ -31,7 +35,7 @@ export default async function handler(req, res) {
             </Conference>
           </Dial>
         </Response>
-      `.trim(),
+      `.trim()
     });
 
     console.log('[TRANSFER] Call started:', call.sid);
