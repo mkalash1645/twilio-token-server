@@ -30,7 +30,7 @@ export default async function handler(req, res) {
             <Conference 
               startConferenceOnEnter="true" 
               endConferenceOnExit="false" 
-              waitUrl="https://api.twilio.com/cowbell.mp3">
+              waitUrl="http://com.twilio.music.classical.s3.amazonaws.com/BusyStrings.mp3">
               ${conferenceName}
             </Conference>
           </Dial>
