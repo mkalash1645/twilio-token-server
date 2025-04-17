@@ -23,6 +23,9 @@ export default async function handler(req, res) {
     const call = await client.calls.create({
       to: TARGET_NUMBER,
       from: TWILIO_NUMBER,
+
+const conferenceName = "KB_LiveSupport";
+
 twiml: `
   <Response>
     <Say>Connecting you to a potential investor who was speaking with our AI assistant.</Say>
@@ -30,12 +33,13 @@ twiml: `
       <Conference 
         startConferenceOnEnter="true" 
         endConferenceOnExit="false" 
-        waitUrl="http://com.twilio.sounds.music.s3.amazonaws.com/MARKOVICHAMP-Borghestral.mp3">
+        waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
         ${conferenceName}
       </Conference>
     </Dial>
   </Response>
 `.trim()
+
 
     });
 
