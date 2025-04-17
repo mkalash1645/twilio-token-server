@@ -17,12 +17,25 @@ export default async function handler(req, res) {
   }
 
   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+  const conferenceName = 'KB_LiveSupport';
 
   try {
     const call = await client.calls.create({
       to: TARGET_NUMBER,
       from: TWILIO_NUMBER,
-      url: "https://handler.twilio.com/twiml/EH0c65c99c31072a9ddf8245c6af471c54" // 👈 Your TwiML Bin URL
+      twiml: `
+        <Response>
+          <Say>Connecting you to a potential investor who was speaking with our AI assistant.</Say>
+          <Dial>
+            <Conference 
+              startConferenceOnEnter="true" 
+              endConferenceOnExit="false"
+              waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
+              ${conferenceName}
+            </Conference>
+          </Dial>
+        </Response>
+      `.trim()
     });
 
     console.log('[TRANSFER] Call started:', call.sid);
