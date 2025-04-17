@@ -30,7 +30,7 @@ twiml: `
       <Conference 
         startConferenceOnEnter="true" 
         endConferenceOnExit="false" 
-        waitUrl="http://com.twilio.music.classical.s3.amazonaws.com/BusyStrings.mp3">
+        waitUrl="http://com.twilio.sounds.music.s3.amazonaws.com/MARKOVICHAMP-Borghestral.mp3">
         ${conferenceName}
       </Conference>
     </Dial>
