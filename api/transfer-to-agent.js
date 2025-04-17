@@ -23,19 +23,20 @@ export default async function handler(req, res) {
     const call = await client.calls.create({
       to: TARGET_NUMBER,
       from: TWILIO_NUMBER,
-      twiml: `
-        <Response>
-          <Say>Connecting you to a customer who was speaking with our AI assistant.</Say>
-          <Dial>
-            <Conference 
-              startConferenceOnEnter="true" 
-              endConferenceOnExit="false" 
-              waitUrl="http://com.twilio.music.classical.s3.amazonaws.com/BusyStrings.mp3">
-              ${conferenceName}
-            </Conference>
-          </Dial>
-        </Response>
-      `.trim()
+twiml: `
+  <Response>
+    <Say>Connecting you to a potential investor who was speaking with our AI assistant.</Say>
+    <Dial>
+      <Conference 
+        startConferenceOnEnter="true" 
+        endConferenceOnExit="false" 
+        waitUrl="http://com.twilio.music.classical.s3.amazonaws.com/BusyStrings.mp3">
+        ${conferenceName}
+      </Conference>
+    </Dial>
+  </Response>
+`.trim()
+
     });
 
     console.log('[TRANSFER] Call started:', call.sid);
