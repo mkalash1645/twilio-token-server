@@ -17,18 +17,24 @@ export default async function handler(req, res) {
   const conferenceName = 'KB_LiveSupport'; // Must match the TwiML Bin conference name
 
   try {
-    const call = await client.calls.create({
-      to: TARGET_NUMBER,
-      from: TWILIO_NUMBER,
-      twiml: `
-        <Response>
-          <Say>You are being connected to a customer who was speaking with our AI assistant.</Say>
-          <Dial>
-            <Conference>${conferenceName}</Conference>
-          </Dial>
-        </Response>
-      `
-    });
+const call = await client.calls.create({
+  to: TARGET_NUMBER,
+  from: TWILIO_NUMBER,
+  twiml: `
+    <Response>
+      <Say>You are being connected to a customer who was speaking with our AI assistant.</Say>
+      <Dial>
+        <Conference 
+          startConferenceOnEnter="true" 
+          endConferenceOnExit="false" 
+          waitUrl="https://api.twilio.com/cowbell.mp3">
+          KB_LiveSupport
+        </Conference>
+      </Dial>
+    </Response>
+  `
+});
+
 
     console.log('[TRANSFER] Call to agent started:', call.sid);
     res.status(200).json({ message: 'Agent is being dialed', sid: call.sid });
