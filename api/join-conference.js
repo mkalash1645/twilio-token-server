@@ -9,33 +9,50 @@ export default async function handler(req, res) {
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
     TWILIO_NUMBER,
+    TARGET_NUMBER,
     CONFERENCE_NAME,
   } = process.env;
 
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_NUMBER || !CONFERENCE_NAME) {
-    return res.status(500).json({ message: 'Missing environment variables' });
-  }
-
   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
-  // Get calls from the last 5 minutes
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-
   try {
-    const recentCalls = await client.calls.list({
+    // Step 1: Dial out to human and place in conference
+    const outboundCall = await client.calls.create({
+      to: TARGET_NUMBER,
       from: TWILIO_NUMBER,
-      status: 'in-progress',
-      startTimeAfter: fiveMinutesAgo,
-      limit: 5,
+      twiml: `
+        <Response>
+          <Say>Connecting you to a potential investor who was speaking with our AI assistant.</Say>
+          <Dial>
+            <Conference 
+              startConferenceOnEnter="true" 
+              endConferenceOnExit="false" 
+              waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
+              ${CONFERENCE_NAME}
+            </Conference>
+          </Dial>
+        </Response>
+      `.trim()
     });
 
-    if (!recentCalls || recentCalls.length === 0) {
-      return res.status(404).json({ message: 'No active call found to redirect.' });
+    console.log('[TRANSFER] Outbound call started:', outboundCall.sid);
+
+    // Step 2: Look for inbound call from the last 5 minutes
+    const recentInboundCalls = await client.calls.list({
+      to: TWILIO_NUMBER,
+      status: 'in-progress',
+      startTimeAfter: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      limit: 5
+    });
+
+    const inboundCall = recentInboundCalls.find(call => call.direction === 'inbound');
+
+    if (!inboundCall) {
+      return res.status(404).json({ message: 'No active inbound call found to redirect.' });
     }
 
-    const activeCall = recentCalls[0];
-
-    const response = await client.calls(activeCall.sid).update({
+    // Step 3: Redirect the inbound caller into the conference
+    const updatedCall = await client.calls(inboundCall.sid).update({
       method: 'POST',
       twiml: `
         <Response>
@@ -52,11 +69,16 @@ export default async function handler(req, res) {
       `.trim()
     });
 
-    console.log('[AUTO-CONFERENCE] Call redirected:', response.sid);
-    return res.status(200).json({ message: 'Caller redirected to conference', sid: response.sid });
+    console.log('[TRANSFER] Inbound call redirected:', updatedCall.sid);
+
+    return res.status(200).json({
+      message: 'Both parties redirected to conference',
+      outboundCallSid: outboundCall.sid,
+      inboundCallSid: updatedCall.sid
+    });
 
   } catch (error) {
-    console.error('[AUTO-CONFERENCE] Error:', error);
-    return res.status(500).json({ message: 'Failed to redirect caller', error: error.message });
+    console.error('[TRANSFER] Error:', error);
+    return res.status(500).json({ message: 'Transfer failed', error: error.message });
   }
 }
