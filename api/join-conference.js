@@ -8,12 +8,12 @@ export default async function handler(req, res) {
   const {
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
-    CONFERENCE_TWIML_URL
+    CONFERENCE_NAME
   } = process.env;
 
   const { callSid } = req.body;
 
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !CONFERENCE_TWIML_URL) {
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !CONFERENCE_NAME) {
     return res.status(500).json({ message: 'Missing environment variables' });
   }
 
@@ -26,7 +26,19 @@ export default async function handler(req, res) {
   try {
     const call = await client.calls(callSid).update({
       method: 'POST',
-      url: CONFERENCE_TWIML_URL
+      twiml: `
+        <Response>
+          <Say>You are now being connected to a live representative.</Say>
+          <Dial>
+            <Conference 
+              startConferenceOnEnter="true" 
+              endConferenceOnExit="false" 
+              waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
+              ${CONFERENCE_NAME}
+            </Conference>
+          </Dial>
+        </Response>
+      `.trim()
     });
 
     console.log('[JOIN-CONFERENCE] Updated call SID:', call.sid);
