@@ -8,23 +8,34 @@ export default async function handler(req, res) {
   const {
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
-    CONFERENCE_NAME
+    TWILIO_NUMBER,
+    CONFERENCE_NAME,
   } = process.env;
 
-  const { callSid } = req.body;
-
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !CONFERENCE_NAME) {
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_NUMBER || !CONFERENCE_NAME) {
     return res.status(500).json({ message: 'Missing environment variables' });
-  }
-
-  if (!callSid) {
-    return res.status(400).json({ message: 'Missing callSid in request body' });
   }
 
   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
+  // Get calls from the last 5 minutes
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
   try {
-    const call = await client.calls(callSid).update({
+    const recentCalls = await client.calls.list({
+      from: TWILIO_NUMBER,
+      status: 'in-progress',
+      startTimeAfter: fiveMinutesAgo,
+      limit: 5,
+    });
+
+    if (!recentCalls || recentCalls.length === 0) {
+      return res.status(404).json({ message: 'No active call found to redirect.' });
+    }
+
+    const activeCall = recentCalls[0];
+
+    const response = await client.calls(activeCall.sid).update({
       method: 'POST',
       twiml: `
         <Response>
@@ -41,10 +52,11 @@ export default async function handler(req, res) {
       `.trim()
     });
 
-    console.log('[JOIN-CONFERENCE] Updated call SID:', call.sid);
-    res.status(200).json({ message: 'Caller redirected to conference', sid: call.sid });
+    console.log('[AUTO-CONFERENCE] Call redirected:', response.sid);
+    return res.status(200).json({ message: 'Caller redirected to conference', sid: response.sid });
+
   } catch (error) {
-    console.error('[JOIN-CONFERENCE] Error:', error);
-    res.status(500).json({ message: 'Failed to redirect caller', error: error.message });
+    console.error('[AUTO-CONFERENCE] Error:', error);
+    return res.status(500).json({ message: 'Failed to redirect caller', error: error.message });
   }
 }
