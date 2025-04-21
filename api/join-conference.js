@@ -56,7 +56,7 @@ export default async function handler(req, res) {
       method: 'POST',
       twiml: `
         <Response>
-          <Say>You are now being connected to a live representative.</Say>
+          <Say>Please hold while we tranfer you to a regional VP.</Say>
           <Dial>
             <Conference 
               startConferenceOnEnter="true" 
