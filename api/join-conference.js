@@ -12,18 +12,12 @@ export default async function handler(req, res) {
     CONFERENCE_NAME,
   } = process.env;
 
-  const { repNumber, repName, conferenceName } = req.body;
-
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_NUMBER || !conferenceName || !repNumber) {
-    return res.status(500).json({ message: 'Missing required parameters or environment variables' });
-  }
-
   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
   try {
     // Step 1: Dial out to human and place in conference
     const outboundCall = await client.calls.create({
-      to: repNumber,
+      to: req.body.targetNumber,
       from: TWILIO_NUMBER,
       twiml: `
         <Response>
@@ -33,21 +27,21 @@ export default async function handler(req, res) {
               startConferenceOnEnter="true" 
               endConferenceOnExit="false" 
               waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
-              ${conferenceName}
+              ${CONFERENCE_NAME}
             </Conference>
           </Dial>
         </Response>
-      `.trim()
+      `.trim(),
     });
 
-    console.log('[JOIN-CONFERENCE] Outbound call to rep started:', outboundCall.sid);
+    console.log('[JOIN-CONFERENCE] Outbound call started:', outboundCall.sid);
 
-    // Step 2: Find the active inbound caller
+    // Step 2: Look for inbound call from the last 5 minutes
     const recentInboundCalls = await client.calls.list({
       to: TWILIO_NUMBER,
       status: 'in-progress',
       startTimeAfter: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      limit: 5
+      limit: 5,
     });
 
     const inboundCall = recentInboundCalls.find(call => call.direction === 'inbound');
@@ -56,31 +50,31 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: 'No active inbound call found to redirect.' });
     }
 
+    // Step 3: Redirect the inbound caller into the conference
     const updatedCall = await client.calls(inboundCall.sid).update({
       method: 'POST',
       twiml: `
         <Response>
-          <Say>Please hold while we transfer you to ${repName || 'our representative'}.</Say>
+          <Say>Please hold while we transfer you to a regional VP.</Say>
           <Dial>
             <Conference 
               startConferenceOnEnter="true" 
               endConferenceOnExit="false" 
               waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
-              ${conferenceName}
+              ${CONFERENCE_NAME}
             </Conference>
           </Dial>
         </Response>
-      `.trim()
+      `.trim(),
     });
 
-    console.log('[JOIN-CONFERENCE] Inbound caller redirected:', updatedCall.sid);
+    console.log('[JOIN-CONFERENCE] Inbound call redirected:', updatedCall.sid);
 
     return res.status(200).json({
       message: 'Both parties redirected to conference',
       outboundCallSid: outboundCall.sid,
-      inboundCallSid: updatedCall.sid
+      inboundCallSid: updatedCall.sid,
     });
-
   } catch (error) {
     console.error('[JOIN-CONFERENCE] Error:', error);
     return res.status(500).json({ message: 'Transfer failed', error: error.message });
