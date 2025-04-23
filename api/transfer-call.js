@@ -29,14 +29,11 @@ export default async function handler(req, res) {
     "Louie Goros": { number: "+14243439000", conference: "Conf_Louie" },
     "Matt Ayer": { number: "+15624529000", conference: "Conf_Matt" },
     "Alex Hardick": { number: "+18582409000", conference: "Conf_Alex" },
-    "Front Desk": { number: "+17026753265", conference: "Conf_Front" }
+    "Front Desk": { number: "+17026753263", conference: "Conf_Front" },
+    "Fallback": { number: "+19493019000", conference: "Conf_Fallback" }
   };
 
-  const selectedRep = repDirectory[repName];
-
-  if (!selectedRep) {
-    return res.status(404).json({ message: 'Representative not found' });
-  }
+  const selectedRep = repDirectory[repName] || repDirectory["Fallback"];
 
   try {
     const call = await client.calls.create({
