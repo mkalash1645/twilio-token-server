@@ -9,39 +9,64 @@ export default async function handler(req, res) {
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
     TWILIO_NUMBER,
-    TARGET_NUMBER
   } = process.env;
 
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_NUMBER || !TARGET_NUMBER) {
-    return res.status(500).json({ message: 'Missing required environment variables' });
+  const { CallStatus, CallSid, From } = req.body;
+
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_NUMBER) {
+    return res.status(500).json({ message: 'Missing environment variables' });
+  }
+
+  if (CallStatus !== 'completed' && CallStatus !== 'no-answer') {
+    return res.status(200).json({ message: 'Call did not complete or was not answered. No fallback triggered.' });
   }
 
   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-  const conferenceName = 'KB_LiveSupport';
 
   try {
-    const call = await client.calls.create({
-      to: TARGET_NUMBER,
+    const fallbackCall = await client.calls.create({
+      to: '+19493019000', // Fallback number
       from: TWILIO_NUMBER,
       twiml: `
         <Response>
-          <Say>You are now connected with a potential investor.</Say>
-          <Dial>
+          <Say>Connecting you to the caller.</Say>
+          <Dial timeout="20">
             <Conference 
-              startConferenceOnEnter="true" 
-              endConferenceOnExit="false" 
+              startConferenceOnEnter="true"
+              endConferenceOnExit="false"
               waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
-              ${conferenceName}
+              Conference_Fallback
             </Conference>
           </Dial>
         </Response>
-      `.trim()
+      `.trim(),
     });
 
-    console.log('[TRANSFER] Call started:', call.sid);
-    res.status(200).json({ message: 'Transfer call initiated', sid: call.sid });
+    // Optionally notify the original caller as well
+    if (From) {
+      await client.calls.create({
+        to: From,
+        from: TWILIO_NUMBER,
+        twiml: `
+          <Response>
+            <Say>We’re sorry, our team was unavailable. We’re reconnecting you shortly.</Say>
+            <Dial timeout="20">
+              <Conference 
+                startConferenceOnEnter="true"
+                endConferenceOnExit="false"
+                waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
+                Conference_Fallback
+              </Conference>
+            </Dial>
+          </Response>
+        `.trim(),
+      });
+    }
+
+    console.log('[FALLBACK] Fallback call(s) started');
+    res.status(200).json({ message: 'Fallback call(s) placed' });
   } catch (error) {
-    console.error('[TRANSFER] Error:', error);
-    res.status(500).json({ message: 'Call failed', error: error.message });
+    console.error('[FALLBACK] Error placing fallback call:', error);
+    res.status(500).json({ message: 'Failed to place fallback call', error: error.message });
   }
 }
