@@ -58,14 +58,22 @@ export default async function handler(req, res) {
     console.log('[TRANSFER-CALL] Call initiated to:', repName);
 
     // Step 2: Redirect the active inbound caller into the same conference
-    const recentInboundCalls = await client.calls.list({
-      to: TWILIO_NUMBER,
-      status: 'in-progress',
-      startTimeAfter: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      limit: 5
-    });
+const recentInboundCalls = await client.calls.list({
+  to: TWILIO_NUMBER,
+  status: 'in-progress',
+  startTimeAfter: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+  limit: 5
+});
 
-    const inboundCall = recentInboundCalls.find(call => call.direction === 'inbound');
+console.log('[DEBUG] Recent Calls:', recentInboundCalls.map(c => ({
+  sid: c.sid,
+  from: c.from,
+  to: c.to,
+  direction: c.direction,
+  status: c.status
+})));
+
+const inboundCall = recentInboundCalls.find(call => call.direction === 'inbound');
 
     if (!inboundCall) {
       return res.status(404).json({ message: 'No active inbound call found to redirect.' });
