@@ -9,39 +9,86 @@ export default async function handler(req, res) {
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
     TWILIO_NUMBER,
-    TARGET_NUMBER,
   } = process.env;
 
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_NUMBER || !TARGET_NUMBER) {
-    return res.status(500).json({ message: 'Missing required environment variables' });
+  const { callSid, agent } = req.body;
+
+  const agentMap = {
+    anthony: { number: '+14158799000', conference: 'Conference_Anthony' },
+    jared: { number: '+19093409000', conference: 'Conference_Jared' },
+    louie: { number: '+14243439000', conference: 'Conference_Louie' },
+    matt: { number: '+15624529000', conference: 'Conference_Matt' },
+    alex: { number: '+18582409000', conference: 'Conference_Alex' },
+  };
+
+  const fallbackNumber = '+19493019000';
+  const fallbackConference = 'Conference_Fallback';
+
+  const agentInfo = agentMap[agent?.toLowerCase()];
+
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_NUMBER) {
+    return res.status(500).json({ message: 'Missing environment variables' });
+  }
+
+  if (!callSid || !agentInfo) {
+    return res.status(400).json({ message: 'Missing or invalid callSid or agent' });
   }
 
   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-  const conferenceName = 'KB_LiveSupport';
 
   try {
-    const call = await client.calls.create({
-      to: TARGET_NUMBER,
+    // Step 1: Dial the selected agent and place them into a conference
+    const outboundCall = await client.calls.create({
+      to: agentInfo.number,
       from: TWILIO_NUMBER,
       twiml: `
         <Response>
-          <Say>Connecting you to a potential investor who was speaking with our AI assistant.</Say>
-          <Dial>
+          <Say>Connecting you to the caller.</Say>
+          <Dial timeout="20">
             <Conference 
               startConferenceOnEnter="true"
               endConferenceOnExit="false"
               waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
-              ${conferenceName}
+              ${agentInfo.conference}
+            </Conference>
+          </Dial>
+        </Response>
+      `.trim(),
+      statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/fallback-call`,
+      statusCallbackEvent: ['completed'],
+      statusCallbackMethod: 'POST'
+    });
+
+    console.log('[TRANSFER] Outbound call to agent started:', outboundCall.sid);
+
+    // Step 2: Redirect the caller into the same conference
+    const updatedCall = await client.calls(callSid).update({
+      method: 'POST',
+      twiml: `
+        <Response>
+          <Say>You are being transferred to a live representative.</Say>
+          <Dial>
+            <Conference 
+              startConferenceOnEnter="true" 
+              endConferenceOnExit="false" 
+              waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
+              ${agentInfo.conference}
             </Conference>
           </Dial>
         </Response>
       `.trim()
     });
 
-    console.log('[TRANSFER] Call started:', call.sid);
-    res.status(200).json({ message: 'Call initiated', sid: call.sid });
+    console.log('[TRANSFER] Caller redirected to conference:', updatedCall.sid);
+
+    return res.status(200).json({
+      message: 'Both parties redirected to conference',
+      outboundCallSid: outboundCall.sid,
+      inboundCallSid: updatedCall.sid
+    });
+
   } catch (error) {
     console.error('[TRANSFER] Error:', error);
-    res.status(500).json({ message: 'Call failed', error: error.message });
+    return res.status(500).json({ message: 'Transfer failed', error: error.message });
   }
 }
