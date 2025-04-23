@@ -9,15 +9,36 @@ export default async function handler(req, res) {
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
     TWILIO_NUMBER,
-    CONFERENCE_NAME,
   } = process.env;
+
+  const { repName } = req.body;
+
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_NUMBER) {
+    return res.status(500).json({ message: 'Missing required environment variables' });
+  }
+
+  if (!repName) {
+    return res.status(400).json({ message: 'Missing repName in request body' });
+  }
 
   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
+  const repDirectory = {
+    "Anthony Goros": { number: "+14158799000", conference: "Conf_Anthony" },
+    "Jared Wolff": { number: "+19093409000", conference: "Conf_Jared" },
+    "Louie Goros": { number: "+14243439000", conference: "Conf_Louie" },
+    "Matt Ayer": { number: "+15624529000", conference: "Conf_Matt" },
+    "Alex Hardick": { number: "+18582409000", conference: "Conf_Alex" },
+    "Front Desk": { number: "+17026753263", conference: "Conf_Front" },
+    "Fallback": { number: "+19493019000", conference: "Conf_Fallback" }
+  };
+
+  const selectedRep = repDirectory[repName] || repDirectory["Fallback"];
+
   try {
-    // Step 1: Dial out to human and place in conference
+    // Step 1: Dial out to rep and place in conference
     const outboundCall = await client.calls.create({
-      to: req.body.targetNumber,
+      to: selectedRep.number,
       from: TWILIO_NUMBER,
       twiml: `
         <Response>
@@ -27,21 +48,21 @@ export default async function handler(req, res) {
               startConferenceOnEnter="true" 
               endConferenceOnExit="false" 
               waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
-              ${CONFERENCE_NAME}
+              ${selectedRep.conference}
             </Conference>
           </Dial>
         </Response>
       `.trim(),
     });
 
-    console.log('[JOIN-CONFERENCE] Outbound call started:', outboundCall.sid);
+    console.log('[TRANSFER-CALL] Call initiated to:', repName);
 
-    // Step 2: Look for inbound call from the last 5 minutes
+    // Step 2: Redirect the active inbound caller into the same conference
     const recentInboundCalls = await client.calls.list({
       to: TWILIO_NUMBER,
       status: 'in-progress',
       startTimeAfter: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      limit: 5,
+      limit: 5
     });
 
     const inboundCall = recentInboundCalls.find(call => call.direction === 'inbound');
@@ -50,33 +71,32 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: 'No active inbound call found to redirect.' });
     }
 
-    // Step 3: Redirect the inbound caller into the conference
     const updatedCall = await client.calls(inboundCall.sid).update({
       method: 'POST',
       twiml: `
         <Response>
-          <Say>Please hold while we transfer you to a regional VP.</Say>
+          <Say>Please hold while we connect you to a regional VP.</Say>
           <Dial>
             <Conference 
               startConferenceOnEnter="true" 
               endConferenceOnExit="false" 
               waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
-              ${CONFERENCE_NAME}
+              ${selectedRep.conference}
             </Conference>
           </Dial>
         </Response>
       `.trim(),
     });
 
-    console.log('[JOIN-CONFERENCE] Inbound call redirected:', updatedCall.sid);
+    console.log('[TRANSFER-CALL] Inbound caller redirected to conference:', inboundCall.sid);
 
     return res.status(200).json({
-      message: 'Both parties redirected to conference',
+      message: 'Both parties connected to conference',
       outboundCallSid: outboundCall.sid,
-      inboundCallSid: updatedCall.sid,
+      inboundCallSid: updatedCall.sid
     });
   } catch (error) {
-    console.error('[JOIN-CONFERENCE] Error:', error);
+    console.error('[TRANSFER-CALL] Error:', error);
     return res.status(500).json({ message: 'Transfer failed', error: error.message });
   }
 }
