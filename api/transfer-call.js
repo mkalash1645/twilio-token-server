@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     "Jared Wolff": { number: "+19093409000", conference: "Conf_Jared" },
     "Louie Goros": { number: "+14243439000", conference: "Conf_Louie" },
     "Matt Ayer": { number: "+15624529000", conference: "Conf_Matt" },
-    "Alex Hardick": { number: "+18582409000", conference: "Conf_Alex" }
+    "Alex Hardick": { number: "+18582409000", conference: "Conf_Alex" },
     "Front Desk": { number: "+17026753263", conference: "Conf_Front" }
   };
 
