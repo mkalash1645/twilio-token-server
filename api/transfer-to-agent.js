@@ -13,17 +13,18 @@ export default async function handler(req, res) {
 
   const { callSid, agent } = req.body;
 
-  const agentMap = {
-    anthony: { number: '+14158799000', conference: 'Conference_Anthony' },
-    jared: { number: '+19093409000', conference: 'Conference_Jared' },
-    louie: { number: '+14243439000', conference: 'Conference_Louie' },
-    matt: { number: '+15624529000', conference: 'Conference_Matt' },
-    alex: { number: '+18582409000', conference: 'Conference_Alex' },
-    front_desk: { number: '+17026753265', conference: 'Conference_Front' },
-  };
+ const agentMap = {
+  anthony: { number: '+14158799000', conference: 'Conf_Anthony' },
+  jared: { number: '+19093409000', conference: 'Conf_Jared' },
+  louie: { number: '+14243439000', conference: 'Conf_Louie' },
+  matt: { number: '+15624529000', conference: 'Conf_Matt' },
+  alex: { number: '+18582409000', conference: 'Conf_Alex' },
+  front_desk: { number: '+17026753265', conference: 'Conf_Front' }, 
+};
+
 
   const fallbackNumber = '+19493019000';
-  const fallbackConference = 'Conference_Fallback';
+  const fallbackConference = 'Conf_Fallback';
 
   const agentInfo = agentMap[agent?.toLowerCase()];
 
