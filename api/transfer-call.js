@@ -11,62 +11,56 @@ export default async function handler(req, res) {
     TWILIO_NUMBER,
   } = process.env;
 
-  const { CallStatus, CallSid, From } = req.body;
+  const { repName } = req.body;
 
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_NUMBER) {
-    return res.status(500).json({ message: 'Missing environment variables' });
+    return res.status(500).json({ message: 'Missing required environment variables' });
   }
 
-  if (CallStatus !== 'completed' && CallStatus !== 'no-answer') {
-    return res.status(200).json({ message: 'Call did not complete or was not answered. No fallback triggered.' });
+  if (!repName) {
+    return res.status(400).json({ message: 'Missing repName in request body' });
   }
 
   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
+  const repDirectory = {
+    "Anthony Goros": { number: "+14158799000", conference: "Conf_Anthony" },
+    "Jared Wolff": { number: "+19093409000", conference: "Conf_Jared" },
+    "Louie Goros": { number: "+14243439000", conference: "Conf_Louie" },
+    "Matt Ayer": { number: "+15624529000", conference: "Conf_Matt" },
+    "Alex Hardick": { number: "+18582409000", conference: "Conf_Alex" }
+    "Front Desk": { number: "+17026753263", conference: "Conf_Front" }
+  };
+
+  const selectedRep = repDirectory[repName];
+
+  if (!selectedRep) {
+    return res.status(404).json({ message: 'Representative not found' });
+  }
+
   try {
-    const fallbackCall = await client.calls.create({
-      to: '+19493019000', // Fallback number
+    const call = await client.calls.create({
+      to: selectedRep.number,
       from: TWILIO_NUMBER,
       twiml: `
         <Response>
-          <Say>Connecting you to the caller.</Say>
-          <Dial timeout="20">
+          <Say>Connecting you to a potential investor who was speaking with our AI assistant.</Say>
+          <Dial>
             <Conference 
-              startConferenceOnEnter="true"
-              endConferenceOnExit="false"
+              startConferenceOnEnter="true" 
+              endConferenceOnExit="false" 
               waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
-              Conference_Fallback
+              ${selectedRep.conference}
             </Conference>
           </Dial>
         </Response>
       `.trim(),
     });
 
-    // Optionally notify the original caller as well
-    if (From) {
-      await client.calls.create({
-        to: From,
-        from: TWILIO_NUMBER,
-        twiml: `
-          <Response>
-            <Say>We’re sorry, our team was unavailable. We’re reconnecting you shortly.</Say>
-            <Dial timeout="20">
-              <Conference 
-                startConferenceOnEnter="true"
-                endConferenceOnExit="false"
-                waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.classical">
-                Conference_Fallback
-              </Conference>
-            </Dial>
-          </Response>
-        `.trim(),
-      });
-    }
-
-    console.log('[FALLBACK] Fallback call(s) started');
-    res.status(200).json({ message: 'Fallback call(s) placed' });
+    console.log('[TRANSFER-CALL] Call initiated to:', repName);
+    res.status(200).json({ message: 'Transfer call initiated', sid: call.sid });
   } catch (error) {
-    console.error('[FALLBACK] Error placing fallback call:', error);
-    res.status(500).json({ message: 'Failed to place fallback call', error: error.message });
+    console.error('[TRANSFER-CALL] Error:', error);
+    res.status(500).json({ message: 'Call failed', error: error.message });
   }
 }
