@@ -83,7 +83,7 @@ const inboundCall = recentInboundCalls.find(call => call.direction === 'inbound'
       method: 'POST',
       twiml: `
         <Response>
-          <Say>Please hold while we connect you to a regional VP.</Say>
+          <Say>Please hold while we connect you to a live representative.</Say>
           <Dial>
             <Conference 
               startConferenceOnEnter="true" 
