@@ -13,34 +13,35 @@ export default async function handler(req, res) {
 
   const { callSid, agent } = req.body;
 
- const agentMap = {
-  anthony: { number: '+14158799000', conference: 'Conf_Anthony' },
-  jared: { number: '+19093409000', conference: 'Conf_Jared' },
-  louie: { number: '+14243439000', conference: 'Conf_Louie' },
-  matt: { number: '+15624529000', conference: 'Conf_Matt' },
-  alex: { number: '+18582409000', conference: 'Conf_Alex' },
-  mason: { number: '+7026753265', conference: 'Conf_Mason' },
-  front_desk: { number: '+17026753263', conference: 'Conf_Front' }, 
-};
-
+  const agentMap = {
+    anthony: { number: '+14158799000', conference: 'Conference_Anthony' },
+    jared: { number: '+19093409000', conference: 'Conference_Jared' },
+    louie: { number: '+14243439000', conference: 'Conference_Louie' },
+    matt: { number: '+15624529000', conference: 'Conference_Matt' },
+    alex: { number: '+18582409000', conference: 'Conference_Alex' },
+    mason: { number: '+17026753265', conference: 'Conference_Mason' },
+    front_desk: { number: '+17026753263', conference: 'Conference_Front' }
+  };
 
   const fallbackNumber = '+19493019000';
-  const fallbackConference = 'Conf_Fallback';
+  const fallbackConference = 'Conference_Fallback';
 
-  const agentInfo = agentMap[agent?.toLowerCase()];
+  const agentInfo = agentMap[agent?.toLowerCase()] || {
+    number: fallbackNumber,
+    conference: fallbackConference,
+  };
 
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_NUMBER) {
     return res.status(500).json({ message: 'Missing environment variables' });
   }
 
-  if (!callSid || !agentInfo) {
-    return res.status(400).json({ message: 'Missing or invalid callSid or agent' });
+  if (!callSid) {
+    return res.status(400).json({ message: 'Missing callSid in request body' });
   }
 
   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
   try {
-    // Step 1: Dial the selected agent and place them into a conference
     const outboundCall = await client.calls.create({
       to: agentInfo.number,
       from: TWILIO_NUMBER,
@@ -64,7 +65,6 @@ export default async function handler(req, res) {
 
     console.log('[TRANSFER] Outbound call to agent started:', outboundCall.sid);
 
-    // Step 2: Redirect the caller into the same conference
     const updatedCall = await client.calls(callSid).update({
       method: 'POST',
       twiml: `
