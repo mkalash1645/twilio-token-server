@@ -63,7 +63,7 @@ console.log('[DEBUG] Full body:', req.body);
     // Step 2: Find the most recent inbound call
     const recentInboundCalls = await client.calls.list({
       to: TWILIO_NUMBER,
-      status: 'in-progress',
+      status: undefined, // get all recent calls
       startTimeAfter: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
       limit: 5
     });
