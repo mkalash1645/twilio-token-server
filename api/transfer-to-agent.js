@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     matt: { number: '+15624529000', conference: 'Conference_Matt' },
     alex: { number: '+18582409000', conference: 'Conference_Alex' },
     mason: { number: '+17026753265', conference: 'Conference_Mason' },
-    front_desk: { number: '+17026753263', conference: 'Conference_Front' }
+    front_desk: { number: '+17026753265', conference: 'Conference_Front' }
   };
 
   const fallbackNumber = '+19493019000';
