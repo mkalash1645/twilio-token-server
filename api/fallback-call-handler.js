@@ -3,14 +3,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { CallStatus, To } = req.body;
+  const { CallSid, CallStatus } = req.body;
 
-  console.log('[FALLBACK-HANDLER] Call status:', CallStatus);
+  console.log('[FALLBACK] Call SID:', CallSid);
+  console.log('[FALLBACK] Call Status:', CallStatus);
 
-  // If the rep didn't answer, you could log or take further action here.
-  if (CallStatus !== 'completed') {
-    console.warn(`[FALLBACK-HANDLER] Call to ${To} was not completed.`);
+  if (CallStatus === 'no-answer' || CallStatus === 'busy' || CallStatus === 'failed') {
+    // Here you could implement a fallback call or send alert notification
+    console.warn(`[FALLBACK] Call ${CallSid} failed or was unanswered.`);
   }
 
-  return res.status(200).json({ message: 'Callback received' });
+  return res.status(200).json({ message: 'Fallback handler processed' });
 }
