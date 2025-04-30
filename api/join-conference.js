@@ -24,20 +24,20 @@ export default async function handler(req, res) {
   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
   const repDirectory = {
-    "Anthony Goros": { number: "+14158799000", conference: "Conf_Anthony" },
-    "Jared Wolff": { number: "+19093409000", conference: "Conf_Jared" },
-    "Louie Goros": { number: "+14243439000", conference: "Conf_Louie" },
-    "Matt Ayer": { number: "+15624529000", conference: "Conf_Matt" },
-    "Alex Hardick": { number: "+18582409000", conference: "Conf_Alex" },
-    "Front Desk": { number: "+17026753263", conference: "Conf_Front" },
-    "Mason Kalashian": { number: "+17026753265", conference: "Conf_Mason" },
-    "Fallback": { number: "+19493019000", conference: "Conf_Fallback" }
+    "Anthony Goros": { number: "+14158799000", conference: "Conference_Anthony" },
+    "Jared Wolff": { number: "+19093409000", conference: "Conference_Jared" },
+    "Louie Goros": { number: "+14243439000", conference: "Conference_Louie" },
+    "Matt Ayer": { number: "+15624529000", conference: "Conference_Matt" },
+    "Alex Hardick": { number: "+18582409000", conference: "Conference_Alex" },
+    "Mason Kalashian": { number: "+17026753265", conference: "Conference_Mason" },
+    "Front Desk": { number: "+17026753263", conference: "Conference_Front" },
+    "Fallback": { number: "+19493019000", conference: "Conference_Fallback" }
   };
 
   const selectedRep = repDirectory[repName] || repDirectory["Fallback"];
 
   try {
-    // Step 1: Dial out to rep and place in conference
+    // Step 1: Dial the rep and place in conference
     const outboundCall = await client.calls.create({
       to: selectedRep.number,
       from: TWILIO_NUMBER,
@@ -56,30 +56,23 @@ export default async function handler(req, res) {
       `.trim(),
     });
 
-    console.log('[TRANSFER-CALL] Call initiated to:', repName);
+    console.log('[JOIN-CONFERENCE] Outbound call started to:', repName);
 
-    // Step 2: Redirect the active inbound caller into the same conference
-const recentInboundCalls = await client.calls.list({
-  to: TWILIO_NUMBER,
-  status: 'in-progress',
-  startTimeAfter: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-  limit: 5
-});
+    // Step 2: Find the most recent inbound call
+    const recentInboundCalls = await client.calls.list({
+      to: TWILIO_NUMBER,
+      status: 'in-progress',
+      startTimeAfter: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      limit: 5
+    });
 
-console.log('[DEBUG] Recent Calls:', recentInboundCalls.map(c => ({
-  sid: c.sid,
-  from: c.from,
-  to: c.to,
-  direction: c.direction,
-  status: c.status
-})));
-
-const inboundCall = recentInboundCalls.find(call => call.direction === 'inbound');
+    const inboundCall = recentInboundCalls.find(call => call.direction === 'inbound');
 
     if (!inboundCall) {
       return res.status(404).json({ message: 'No active inbound call found to redirect.' });
     }
 
+    // Step 3: Redirect inbound caller to same conference
     const updatedCall = await client.calls(inboundCall.sid).update({
       method: 'POST',
       twiml: `
@@ -97,15 +90,16 @@ const inboundCall = recentInboundCalls.find(call => call.direction === 'inbound'
       `.trim(),
     });
 
-    console.log('[TRANSFER-CALL] Inbound caller redirected to conference:', inboundCall.sid);
+    console.log('[JOIN-CONFERENCE] Inbound caller redirected:', inboundCall.sid);
 
     return res.status(200).json({
       message: 'Both parties connected to conference',
       outboundCallSid: outboundCall.sid,
       inboundCallSid: updatedCall.sid
     });
+
   } catch (error) {
-    console.error('[TRANSFER-CALL] Error:', error);
+    console.error('[JOIN-CONFERENCE] Error:', error);
     return res.status(500).json({ message: 'Transfer failed', error: error.message });
   }
 }
