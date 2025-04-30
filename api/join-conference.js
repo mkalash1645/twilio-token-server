@@ -13,15 +13,16 @@ export default async function handler(req, res) {
 
   const { repName } = req.body;
 
+  console.log('[DEBUG] Incoming transfer for:', repName);
+  console.log('[DEBUG] Full body:', req.body);
+
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_NUMBER) {
     return res.status(500).json({ message: 'Missing required environment variables' });
   }
 
-if (!repName) {
-  console.log('[DEBUG] Incoming transfer for:', repName);
-  console.log('[DEBUG] Full body:', req.body);
-  return res.status(400).json({ message: 'Missing repName in request body' });
-}
+  if (!repName) {
+    return res.status(400).json({ message: 'Missing repName in request body' });
+  }
 
   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
@@ -39,7 +40,7 @@ if (!repName) {
   const selectedRep = repDirectory[repName] || repDirectory["Fallback"];
 
   try {
-    // Step 1: Dial the rep and place in conference
+    // Step 1: Dial out to rep and place in conference
     const outboundCall = await client.calls.create({
       to: selectedRep.number,
       from: TWILIO_NUMBER,
@@ -60,21 +61,23 @@ if (!repName) {
 
     console.log('[JOIN-CONFERENCE] Outbound call started to:', repName);
 
-    // Step 2: Find the most recent inbound call
+    // Step 2: Find the most recent inbound call from any of your Twilio numbers
     const recentInboundCalls = await client.calls.list({
-      to: TWILIO_NUMBER,
-      status: undefined, // get all recent calls
+      status: 'in-progress',
       startTimeAfter: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      limit: 5
+      limit: 10
     });
 
-    const inboundCall = recentInboundCalls.find(call => call.direction === 'inbound');
+    const acceptedInboundNumbers = ["+14243178845", "+14245411031"];
+
+    const inboundCall = recentInboundCalls.find(call =>
+      call.direction === 'inbound' && acceptedInboundNumbers.includes(call.to)
+    );
 
     if (!inboundCall) {
       return res.status(404).json({ message: 'No active inbound call found to redirect.' });
     }
 
-    // Step 3: Redirect inbound caller to same conference
     const updatedCall = await client.calls(inboundCall.sid).update({
       method: 'POST',
       twiml: `
@@ -92,7 +95,7 @@ if (!repName) {
       `.trim(),
     });
 
-    console.log('[JOIN-CONFERENCE] Inbound caller redirected:', inboundCall.sid);
+    console.log('[JOIN-CONFERENCE] Inbound caller redirected to conference:', inboundCall.sid);
 
     return res.status(200).json({
       message: 'Both parties connected to conference',
