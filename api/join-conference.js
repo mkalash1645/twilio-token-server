@@ -17,7 +17,9 @@ export default async function handler(req, res) {
     return res.status(500).json({ message: 'Missing required environment variables' });
   }
 
-  if (!repName) {
+  if (!repName)console.log('[DEBUG] Incoming transfer for:', repName);
+console.log('[DEBUG] Full body:', req.body);
+ {
     return res.status(400).json({ message: 'Missing repName in request body' });
   }
 
