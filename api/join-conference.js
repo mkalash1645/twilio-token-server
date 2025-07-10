@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     "Jared Wolff": { number: "+19093409000", conference: "Conference_Jared" },
     "Louie Goros": { number: "+14243439000", conference: "Conference_Louie" },
     "Matt Ayer": { number: "+15624529000", conference: "Conference_Matt" },
-    "Alex Hardick": { number: "+18582409000", conference: "Conference_Alex" },
+    "Troy Reese": { number: "+18582409000", conference: "Conference_Alex" },
     "Mason Kalashian": { number: "+17026753265", conference: "Conference_Mason" },
     "Front Desk": { number: "+17026753265", conference: "Conference_Front" },
     "Fallback": { number: "+19493019000", conference: "Conference_Fallback" }
