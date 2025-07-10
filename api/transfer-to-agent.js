@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     jared: { number: '+19093409000', conference: 'Conference_Jared' },
     louie: { number: '+14243439000', conference: 'Conference_Louie' },
     matt: { number: '+15624529000', conference: 'Conference_Matt' },
-    alex: { number: '+18582409000', conference: 'Conference_Alex' },
+    troy: { number: '+18582409000', conference: 'Conference_Alex' },
     mason: { number: '+17026753265', conference: 'Conference_Mason' },
     front_desk: { number: '+17026753265', conference: 'Conference_Front' }
   };
