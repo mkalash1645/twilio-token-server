@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     "Matt Ayer": { number: "+15624529000", conference: "Conference_Matt" },
     "Troy Reese": { number: "+18582409000", conference: "Conference_Alex" },
     "Mason Kalashian": { number: "+17026753265", conference: "Conference_Mason" },
-    "Front Desk": { number: "+17026753265", conference: "Conference_Front" },
+    "Front Desk": { number: "+17026753263", conference: "Conference_Front" },
     "Fallback": { number: "+19493019000", conference: "Conference_Fallback" }
   };
 
